@@ -478,19 +478,22 @@ spif_bd_error SPIFBlockDevice::_spi_send_read_command(int read_inst, uint8_t *bu
     _spi.write(read_inst);
 
     // Write Address (can be either 3 or 4 bytes long)
-    for (int address_shift = ((_address_size - 1) * 8); address_shift >= 0; address_shift -= 8) {
-        _spi.write((addr >> address_shift) & 0xFF);
+    char addr_buf[sizeof(bd_addr_t)];
+    for (unsigned int i = 0; i < _address_size; i++) {
+        int address_shift = 8 * (_address_size - 1 - i);
+        addr_buf[i] = static_cast<char>((addr >> address_shift) & 0xFF);
     }
+    _spi.write(addr_buf, _address_size, nullptr, 0);
 
     // Write Dummy Cycles Bytes
-    for (uint32_t i = 0; i < dummy_bytes; i++) {
-        _spi.write(dummy_byte);
-    }
+    char dummy_buf[8];
+    MBED_ASSERT(dummy_bytes <= 8);
+    memset(dummy_buf, dummy_byte, dummy_bytes);
+    _spi.write(dummy_buf, dummy_bytes, nullptr, 0);
 
     // Read Data
-    for (bd_size_t i = 0; i < size; i++) {
-        buffer[i] = _spi.write(0);
-    }
+    _spi.set_default_write_value(0);
+    _spi.write(nullptr, 0, (char*)buffer, size);
 
     _spi.deselect();
 
@@ -544,19 +547,21 @@ spif_bd_error SPIFBlockDevice::_spi_send_program_command(int prog_inst, const vo
     _spi.write(prog_inst);
 
     // Write Address (can be either 3 or 4 bytes long)
-    for (int address_shift = ((_address_size - 1) * 8); address_shift >= 0; address_shift -= 8) {
-        _spi.write((addr >> address_shift) & 0xFF);
+    char addr_buf[sizeof(bd_addr_t)];
+    for (unsigned int i = 0; i < _address_size; i++) {
+        int address_shift = 8 * (_address_size - 1 - i);
+        addr_buf[i] = static_cast<char>((addr >> address_shift) & 0xFF);
     }
+    _spi.write(addr_buf, _address_size, nullptr, 0);
 
     // Write Dummy Cycles Bytes
-    for (uint32_t i = 0; i < dummy_bytes; i++) {
-        _spi.write(dummy_byte);
-    }
+    char dummy_buf[8];
+    MBED_ASSERT(dummy_bytes <= 8);
+    memset(dummy_buf, dummy_byte, dummy_bytes);
+    _spi.write(dummy_buf, dummy_bytes, nullptr, 0);
 
     // Write Data
-    for (bd_size_t i = 0; i < size; i++) {
-        _spi.write(data[i]);
-    }
+    _spi.write((char*)data, size, nullptr, 0);
 
     _spi.deselect();
 
@@ -586,14 +591,18 @@ spif_bd_error SPIFBlockDevice::_spi_send_general_command(int instruction, bd_add
     // Reading SPI Bus registers does not require Flash Address
     if (addr != SPI_NO_ADDRESS_COMMAND) {
         // Write Address (can be either 3 or 4 bytes long)
-        for (int address_shift = ((_address_size - 1) * 8); address_shift >= 0; address_shift -= 8) {
-            _spi.write((addr >> address_shift) & 0xFF);
+        char addr_buf[sizeof(bd_addr_t)];
+        for (unsigned int i = 0; i < _address_size; i++) {
+            int address_shift = 8 * (_address_size - 1 - i);
+            addr_buf[i] = static_cast<char>((addr >> address_shift) & 0xFF);
         }
+        _spi.write(addr_buf, _address_size, nullptr, 0);
 
         // Write Dummy Cycles Bytes
-        for (uint32_t i = 0; i < dummy_bytes; i++) {
-            _spi.write(dummy_byte);
-        }
+        char dummy_buf[8];
+        MBED_ASSERT(dummy_bytes <= 8);
+        memset(dummy_buf, dummy_byte, dummy_bytes);
+        _spi.write(dummy_buf, dummy_bytes, nullptr, 0);
     }
 
     // Read/Write Data
